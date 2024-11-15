@@ -1,1 +1,1 @@
-enum QRCodeReadingState { loading, preview, gettingData, error }
+enum QRCodeReadingState { loading, preview, scanned, error }

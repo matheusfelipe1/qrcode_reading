@@ -1,29 +1,31 @@
+import 'dart:async';
+import 'package:qrcode_reading/src/qrcode_settings.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../method_channel/qrcode_reading_method_channel.dart';
 
 abstract class QRCodeReadingPlatform extends PlatformInterface {
-  /// Constructs a QrcodeReadingPlatform.
+  /// Constructs a QRCodeReadingPlatform.
   QRCodeReadingPlatform() : super(token: _token);
 
   static final Object _token = Object();
 
-  static QRCodeReadingPlatform _instance = MethodChannelQrcodeReading();
+  static QRCodeReadingPlatform _instance = MethodChannelQRCodeReading();
 
-  /// The default instance of [QrcodeReadingPlatform] to use.
+  /// The default instance of [QRCodeReadingPlatform] to use.
   ///
-  /// Defaults to [MethodChannelQrcodeReading].
+  /// Defaults to [MethodChannelQRCodeReading].
   static QRCodeReadingPlatform get instance => _instance;
 
   /// Platform-specific implementations should set this with their own
-  /// platform-specific class that extends [QrcodeReadingPlatform] when
+  /// platform-specific class that extends [QRCodeReadingPlatform] when
   /// they register themselves.
   static set instance(QRCodeReadingPlatform instance) {
     PlatformInterface.verifyToken(instance, _token);
     _instance = instance;
   }
 
-  Future<int?> getTextureId() {
+  Future<int?> getTextureId(QRCodeSettings settings) {
     throw UnimplementedError('getTextureId() has not been implemented.');
   }
 
@@ -39,5 +41,9 @@ abstract class QRCodeReadingPlatform extends PlatformInterface {
     throw UnimplementedError('dispose() has not been implemented.');
   }
 
-  Stream<String> get listenQRCodeRead => throw UnimplementedError('onQRCodeRead has not been implemented.');
+  Future<void> toggleFlashLight(bool isFlashLightOn) {
+    throw UnimplementedError('setFlashLight() has not been implemented.');
+  }
+
+  Future<dynamic> Function(Object) handlerResult = (result) async {};
 }

@@ -1,55 +1,76 @@
 import 'dart:async';
-
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:qrcode_reading/src/qrcode_settings.dart';
 import 'package:qrcode_reading/constants/qrcode_reading_constants.dart';
 
 import '../src/qrcode_reading_platform_interface.dart';
 
-/// An implementation of [QrcodeReadingPlatform] that uses method channels.
-class MethodChannelQrcodeReading extends QRCodeReadingPlatform {
+/// An implementation of [QRCodeReadingPlatform] that uses method channels.
+class MethodChannelQRCodeReading extends QRCodeReadingPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
   final methodChannel = const MethodChannel(qrcodeReadingChannel);
 
-  final StreamController<String> _onQRCodeReadController = StreamController<String>();
-
   @override
-  Future<int?> getTextureId() async {
+  Future<int?> getTextureId(QRCodeSettings settings) async {
     try {
-      methodChannel.setMethodCallHandler(_handleMethodCall);
-      return await methodChannel.invokeMethod<int>(startQRCodeReading);
+      methodChannel.setMethodCallHandler(callHandler);
+      return await methodChannel.invokeMethod<int>(
+        startQRCodeReading,
+        settings.toMap(),
+      );
     } catch (error) {
+      if (error is PlatformException) {
+        handlerResult(error); 
+      }
       return null;
+    }
+  }
+
+
+  Future<dynamic> callHandler(MethodCall call) async {
+    if (call.method == onQRCodeRead) {
+      handlerResult(call.arguments);
     }
   }
 
   @override
   Future<void> pause() async {
-    await methodChannel.invokeMethod<void>(pauseQRCodeReading);
+    try {
+      await methodChannel.invokeMethod<void>(pauseQRCodeReading);
+    } on PlatformException catch (error) {
+      handlerResult(error);
+    }
   }
 
   @override
   Future<void> resume() async {
-    await methodChannel.invokeMethod<void>(resumeQRCodeReading);
+    try {
+      await methodChannel.invokeMethod<void>(resumeQRCodeReading);
+    } on PlatformException catch (error) {
+      handlerResult(error);
+    }
   }
 
   @override
   Future<void> dispose() async {
-    await methodChannel.invokeMethod<void>(stopQRCodeReading);
-    _onQRCodeReadController.close();
+    try {
+      await methodChannel.invokeMethod<void>(stopQRCodeReading);
+    } on PlatformException catch (error) {
+      handlerResult(error);
+    }
   }
 
   @override
-  Stream<String> get listenQRCodeRead => _onQRCodeReadController.stream;
-
-
-  Future<void> _handleMethodCall(MethodCall call) async {
-    switch (call.method) {
-      case onQRCodeRead when call.arguments is String:
-        _onQRCodeReadController.add(call.arguments);
-        break;
-      default:
+  Future<void> toggleFlashLight(bool isFlashLightOn) async {
+    try {
+      await methodChannel.invokeMethod<void>(
+        toggleFlashLightMethod,
+        isFlashLightOn,
+      );
+    } on PlatformException catch (error) {
+      handlerResult(error);
     }
   }
 

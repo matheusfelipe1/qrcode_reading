@@ -25,6 +25,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     private var registry: FlutterTextureRegistry
     private var captureSession: AVCaptureSession?
     private var commandChannel: FlutterMethodChannel
+    private var videoCaptureDevice: AVCaptureDevice?
     
     init(registry: FlutterTextureRegistry, messenger: FlutterBinaryMessenger) {
         self.registry = registry
@@ -32,14 +33,14 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         super.init()
     }
     
-    func startCameraAndGetTextureId() -> Int64 {
+    func startCameraAndGetTextureId(settings: QRCodeSettings) -> Int64 {
         textureId = registry.register(self)
 
         let captureSession = AVCaptureSession()
-        captureSession.sessionPreset = .high
-
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else { return -1 }
         guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice) else { return -1 }
+        
+        self.videoCaptureDevice = videoCaptureDevice
 
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
@@ -62,32 +63,49 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)
         }
-
+        
         self.captureSession = captureSession
-        captureSession.startRunning()
-
-        isScanning = true
+        DispatchQueue.global(qos: .background).async {
+            self.resumeCamera()
+        }
+        
+        DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.0) {
+            self.toggleFlash(flashLight: settings.isFlashLightOn)
+        }
 
         return textureId
     }
     
     func stopCamera() {
         isScanning = false
-        captureSession?.stopRunning()
-        if textureId != 0 {
-            registry.unregisterTexture(textureId)
-            textureId = 0
+        DispatchQueue.global(qos: .background).async {
+            self.captureSession?.stopRunning()
+        }
+        DispatchQueue.main.async {
+            self.registry.unregisterTexture(self.textureId)
+            self.textureId = 0
         }
     }
     
     func pauseCamera() {
         isScanning = false
-        captureSession?.stopRunning()
+        DispatchQueue.global(qos: .background).async {
+            self.captureSession?.stopRunning()
+        }
     }
     
     func resumeCamera() {
         isScanning = true
-        captureSession?.startRunning()
+        DispatchQueue.global(qos: .background).async {
+            if let session = self.captureSession, !session.isRunning {
+                self.isScanning = true
+                session.startRunning()
+            }
+        }
+        DispatchQueue.main.async {
+            self.registry.textureFrameAvailable(self.textureId)
+        }
+        
     }
 
     func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
@@ -132,7 +150,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         guard !isProcessingQRCode else { return }
         isProcessingQRCode = true
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self = self else { return }
 
             for metadataObject in metadataObjects {
@@ -147,10 +165,36 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
                 }
             }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.isProcessingQRCode = false
             }
         }
     }
+    
+    func toggleFlash(flashLight: Bool) {
+        guard let device = videoCaptureDevice, device.hasTorch else {
+            print("Device does not have a flashlight.")
+            return
+        }
+
+        do {
+            try device.lockForConfiguration()
+
+            if flashLight {
+                if device.isTorchModeSupported(.on) {
+                    device.torchMode = .on
+                } else {
+                    print("Flashlight mode not supported.")
+                }
+            } else {
+                device.torchMode = .off
+            }
+
+            device.unlockForConfiguration()
+        } catch {
+            print(error.localizedDescription)
+        }
+    }
+
 }
 

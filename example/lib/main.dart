@@ -5,40 +5,68 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Center(
-          child: QrcodeReading(
-            overlayWidget: Container(
-              color: Colors.red,
-              child: const Center(
-                child: Text('Overlay'),
-              ),
-            ),
-            onRead: (data) {
-              print(data);
-            },
+      routes: {
+        "/": (_) => const _FirstScreen(),
+        "/second": (_) => const _SecondScreen(),
+      },
+    );
+  }
+}
 
-          ),
+class _FirstScreen extends StatefulWidget {
+  const _FirstScreen({super.key});
+
+  @override
+  State<_FirstScreen> createState() => __FirstScreenState();
+}
+
+class __FirstScreenState extends State<_FirstScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: TextButton(
+          onPressed: () {
+            Navigator.pushNamed(context, "/second");
+          },
+          child: const Text("Next"),
         ),
+      ),
+    );
+  }
+}
+
+class _SecondScreen extends StatefulWidget {
+  const _SecondScreen({super.key});
+
+  @override
+  State<_SecondScreen> createState() => __SecondScreenState();
+}
+
+class __SecondScreenState extends State<_SecondScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
+      extendBodyBehindAppBar: true,
+      body: QRCodeReading(
+        pauseReading: false,
+        isFlashLightOn: false,
+        onRead: (data) {
+          debugPrint(data);
+        },
       ),
     );
   }

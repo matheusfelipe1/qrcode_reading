@@ -27,11 +27,5 @@ abstract class BaseQRCodeReadingPage<T extends StatefulWidget, C extends BaseQRC
     super.dispose();
   }
 
-  @override
-  void didHaveMemoryPressure() {
-    super.didHaveMemoryPressure();
-    controller.onPause();
-  }
-
   C getController();  
 } 
