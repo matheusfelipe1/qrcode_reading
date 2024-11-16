@@ -1,6 +1,6 @@
 name: qrcode_reading
 description: "A new Flutter plugin project."
-version: 0.0.1
+version: 1.0.0
 homepage: https://github.com/matheusfelipe1/qrcode_reading
 repository: https://github.com/matheusfelipe1/qrcode_reading
 documentation: https://github.com/matheusfelipe1/qrcode_reading#readme
