@@ -49,9 +49,14 @@ android {
         minSdk = 21
     }
 
+    buildFeatures {
+        viewBinding = true
+    }
+
     dependencies {
         testImplementation("org.jetbrains.kotlin:kotlin-test")
         testImplementation("org.mockito:mockito-core:5.0.0")
+        implementation 'com.google.zxing:core:3.5.1'
     }
 
     testOptions {

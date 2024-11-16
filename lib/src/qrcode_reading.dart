@@ -78,7 +78,6 @@ class _QRCodeReadingState
         switch (state) {
           case QRCodeReadingState.loading:
             return widget.loadingWidget ?? _buildDefaultLoadingWidget();
-
           case QRCodeReadingState.preview:
             return _buildPreviewWidget();
           case QRCodeReadingState.scanned when controller.data != null:

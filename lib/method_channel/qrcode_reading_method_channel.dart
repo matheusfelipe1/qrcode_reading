@@ -32,6 +32,8 @@ class MethodChannelQRCodeReading extends QRCodeReadingPlatform {
   Future<dynamic> callHandler(MethodCall call) async {
     if (call.method == onQRCodeRead) {
       handlerResult(call.arguments);
+    } else if (call.method == onError) {
+      handlerResult(PlatformException(code: onError, message: call.arguments));
     }
   }
 

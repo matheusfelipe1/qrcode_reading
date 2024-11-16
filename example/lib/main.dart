@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:qrcode_reading/qrcode_reading.dart';
 
 void main() {
@@ -32,7 +33,8 @@ class __FirstScreenState extends State<_FirstScreen> {
     return Scaffold(
       body: Center(
         child: TextButton(
-          onPressed: () {
+          onPressed: () async {
+            await Permission.camera.request();
             Navigator.pushNamed(context, "/second");
           },
           child: const Text("Next"),
@@ -60,10 +62,14 @@ class __SecondScreenState extends State<_SecondScreen> {
           icon: const Icon(Icons.arrow_back),
         ),
       ),
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false,
       body: QRCodeReading(
         pauseReading: false,
         isFlashLightOn: false,
+        overlayWidget: Material(
+          color: Colors.black.withOpacity(.5),
+          child: const Text("Testing..."),
+        ),
         onRead: (data) {
           debugPrint(data);
         },
