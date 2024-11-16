@@ -1,0 +1,1 @@
+export 'package:qrcode_reading/src/qrcode_reading.dart';
