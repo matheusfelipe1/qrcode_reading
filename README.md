@@ -11,7 +11,7 @@ A Flutter plugin for scanning QR codes with ease. This plugin provides a seamles
 - **Pause QR Code Reading**: Pause and resume the QR code scanning process with the `pauseReading` property.
 - **Flashlight Control**: Control the flashlight with the `isFlashLightOn` property. Enable or disable the flashlight to improve scanning in low-light environments.
 
-  <img src="https://github.com/matheusfelipe1/qrcode_reading/raw/main/img_qrcode_reading.jpeg" alt="Exemplo de imagem" width="120"/>
+  <img src="https://github.com/matheusfelipe1/qrcode_reading/raw/main/img_qrcode_reading.jpeg" alt="Exemplo de imagem" width="180"/>
 
 ## Installation
 
