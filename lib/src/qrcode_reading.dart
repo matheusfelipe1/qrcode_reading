@@ -16,7 +16,7 @@ class QRCodeReading extends StatefulWidget {
   });
 
   /// This widget will be displayed on top of the camera view
-  final Widget? overlayWidget;
+  final Widget Function(BoxConstraints)? overlayWidget;
 
   /// Widget to show when the camera is loading
   final Widget? loadingWidget;
@@ -99,15 +99,36 @@ class _QRCodeReadingState
   }
 
   Widget _buildPreviewWidget() {
-    if (controller.textureId == null) {
-      return _buildDefaultLoadingWidget();
-    }
-    return Stack(
-      children: [
-        Texture(textureId: controller.textureId!),
-        if (widget.overlayWidget != null) widget.overlayWidget!,
-      ],
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      if (controller.textureId == null) {
+        return _buildDefaultLoadingWidget();
+      }
+
+      final Widget scannerWidget = AspectRatio(
+        aspectRatio: constraints.maxWidth / constraints.maxHeight,
+        child: ClipRect(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              child: Texture(textureId: controller.textureId!),
+            ),
+          ),
+        ),
+      );
+
+      if (widget.overlayWidget == null) {
+        scannerWidget;
+      }
+      return Stack(
+        children: [
+          scannerWidget,
+          if (widget.overlayWidget != null)
+            widget.overlayWidget!.call(constraints),
+        ],
+      );
+    });
   }
 
   Widget _buildErrorWidget() {

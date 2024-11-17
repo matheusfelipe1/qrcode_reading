@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qrcode_reading/qrcode_reading.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:qrcode_reading_example/styles/shape_qecode_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -52,27 +53,59 @@ class _SecondScreen extends StatefulWidget {
 }
 
 class __SecondScreenState extends State<_SecondScreen> {
+
+  var _isFlashLightOn = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _isFlashLightOn = !_isFlashLightOn;
+              });
+            },
+            icon: Icon(_isFlashLightOn ? Icons.flash_off : Icons.flash_on, color: Colors.white,),
+          ),
+        ],
       ),
-      extendBodyBehindAppBar: false,
-      body: QRCodeReading(
-        pauseReading: false,
-        isFlashLightOn: false,
-        overlayWidget: Material(
-          color: Colors.black.withOpacity(.5),
-          child: const Text("Testing..."),
-        ),
-        onRead: (data) {
-          debugPrint(data);
-        },
+      body: Column(
+        children: [
+          Expanded(
+            child: QRCodeReading(
+              isFlashLightOn: _isFlashLightOn,
+              onRead: (data) {
+                WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(data),
+                    ),
+                  );
+                });
+              },
+              overlayWidget: (constraints) => SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: Material(
+                  shape: ShapeQrCodeView(
+                    borderRadius: 32,
+                    borderLength: 40,
+                    borderColor: Colors.white,
+                  ),
+                  color: Colors.black.withOpacity(.5),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -4,12 +4,14 @@ A Flutter plugin for scanning QR codes with ease. This plugin provides a seamles
 
 ## Features
 
-- **Overlay Widget**: Display a custom widget on top of the camera view to enhance the user interface.
+- **Overlay Widget**: Display a custom function widget on top of the camera view to enhance the user interface.
 - **Loading Widget**: Show a widget while the camera is initializing.
 - **On QR Code Read**: Trigger a callback function when a QR code is successfully scanned. The scanned result is passed as a `String`.
 - **Error Widget**: Display a widget when an error occurs during QR code scanning.
 - **Pause QR Code Reading**: Pause and resume the QR code scanning process with the `pauseReading` property.
 - **Flashlight Control**: Control the flashlight with the `isFlashLightOn` property. Enable or disable the flashlight to improve scanning in low-light environments.
+
+![Example image](https://github.com/matheusfelipe1/qrcode_reading/blob/main/img_qrcode_reading.jpeg)
 
 ## Installation
 
@@ -84,14 +86,14 @@ import 'package:permission_handler/permission_handler.dart';
 
 ```dart
 QRCodeReader(
-  overlayWidget: MyCustomOverlay(), // Widget displayed on top of the camera view
+  isFlashLightOn: false, // Initial state of the flashlight
+  pauseReading: false, // Control to pause the QR code reading
+  errorWidget: Text("An error occurred"), // Widget shown when an error occurs
   loadingWidget: CircularProgressIndicator(), // Widget shown while the camera is loading
+  overlayWidget: (constraints) => MyCustomOverlay(), // Widget displayed on top of the camera view
   onRead: (result) {
     print("QR Code: $result");
   }, // Callback when a QR code is read
-  errorWidget: Text("An error occurred"), // Widget shown when an error occurs
-  pauseReading: false, // Control to pause the QR code reading
-  isFlashLightOn: false, // Initial state of the flashlight
 );
 ```
 

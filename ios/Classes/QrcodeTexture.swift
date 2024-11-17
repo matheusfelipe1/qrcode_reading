@@ -37,6 +37,8 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         textureId = registry.register(self)
 
         let captureSession = AVCaptureSession()
+        captureSession.sessionPreset = .high
+        
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else { return -1 }
         guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice) else { return -1 }
         
@@ -59,6 +61,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         }
 
         let videoOutput = AVCaptureVideoDataOutput()
+        videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)]
         videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "camera_queue"))
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)

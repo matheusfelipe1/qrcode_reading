@@ -1,3 +1,4 @@
-## 1.0.1
+## 1.0.2
 
-* TODO: Adding author
+- Added constraints in overlayWidget
+- Fix pespective in camera preview
