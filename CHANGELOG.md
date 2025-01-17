@@ -1,4 +1,4 @@
-## 1.0.2
+## 1.0.3
 
-- Added constraints in overlayWidget
-- Fix pespective in camera preview
+- Fix CameraDevice called when is closed
+- Fix Surface is called when is unvalid
