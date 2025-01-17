@@ -54,11 +54,13 @@ class QRCodeTexture(
                 override fun onDisconnected(camera: CameraDevice) {
                     camera.close()
                     cameraDevice = null
+                    captureSession = null
                 }
 
                 override fun onError(camera: CameraDevice, error: Int) {
                     camera.close()
                     cameraDevice = null
+                    captureSession = null
                 }
             }, backgroundHandler)
         } catch (e: CameraAccessException) {
@@ -86,6 +88,8 @@ class QRCodeTexture(
                 }
             }, backgroundHandler)
         }
+
+        if (!previewSurface.isValid()) return
 
         val surfaces = listOf(previewSurface, imageReader!!.surface)
         try {
@@ -170,6 +174,7 @@ class QRCodeTexture(
     }
 
     fun toggleFlash(enableFlash: Boolean) {
+        if (cameraDevice == null || captureSession == null) return
         if (captureRequestBuilder == null) return
         val newFlashMode = if (enableFlash) {
             CaptureRequest.FLASH_MODE_TORCH

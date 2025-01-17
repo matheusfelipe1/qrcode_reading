@@ -85,7 +85,7 @@ import 'package:permission_handler/permission_handler.dart';
 ### Example
 
 ```dart
-QRCodeReader(
+QRCodeReading(
   isFlashLightOn: false, // Initial state of the flashlight
   pauseReading: false, // Control to pause the QR code reading
   errorWidget: Text("An error occurred"), // Widget shown when an error occurs
