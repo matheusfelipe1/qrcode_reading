@@ -53,8 +53,9 @@ class _SecondScreen extends StatefulWidget {
 }
 
 class __SecondScreenState extends State<_SecondScreen> {
-
   var _isFlashLightOn = false;
+
+  var pause = false;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +74,10 @@ class __SecondScreenState extends State<_SecondScreen> {
                 _isFlashLightOn = !_isFlashLightOn;
               });
             },
-            icon: Icon(_isFlashLightOn ? Icons.flash_off : Icons.flash_on, color: Colors.white,),
+            icon: Icon(
+              _isFlashLightOn ? Icons.flash_off : Icons.flash_on,
+              color: Colors.white,
+            ),
           ),
         ],
       ),
@@ -82,8 +86,13 @@ class __SecondScreenState extends State<_SecondScreen> {
           Expanded(
             child: QRCodeReading(
               isFlashLightOn: _isFlashLightOn,
+              pauseReading: pause,
               onRead: (data) {
                 WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+                  setState(() {
+                    pause = true;
+                  });
+                  Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(data),

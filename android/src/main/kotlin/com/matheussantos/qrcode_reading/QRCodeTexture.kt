@@ -1,6 +1,7 @@
 package com.matheussantos.qrcode_reading
 
 import android.util.Size
+import android.util.Log
 import android.os.Looper
 import android.os.Handler
 import android.media.Image
@@ -24,6 +25,7 @@ class QRCodeTexture(
     private val surfaceTexture: SurfaceTexture,
 ) {
 
+    private var isCameraStopped = false
     private var imageReader: ImageReader? = null
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
@@ -36,35 +38,62 @@ class QRCodeTexture(
 
     @SuppressLint("MissingPermission")
     fun startCamera(isFlashLightOn: Boolean) {
+        isCameraStopped = false
         val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
             val characteristics = cameraManager.getCameraCharacteristics(id)
             characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
         } ?: run {
-            errorWhenReadingQRCode(java.lang.Exception(QRCodeConstants.CAMERA_REAR_404))
+            errorWhenReadingQRCode(java.lang.Exception(QRCodeConstants.CAMERA_REAR_404), "startCamera 1")
             return
         }
 
         try {
             cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                 override fun onOpened(camera: CameraDevice) {
+                    if (isCameraStopped) {
+                        camera.close()
+                        return
+                    }
                     cameraDevice = camera
                     createCaptureSession(isFlashLightOn)
                 }
 
                 override fun onDisconnected(camera: CameraDevice) {
-                    camera.close()
-                    cameraDevice = null
-                    captureSession = null
+                    try {
+                        camera.close()
+                        captureSession?.stopRepeating()
+                        captureSession?.close()
+                        cameraDevice?.close()
+                        imageReader?.close()
+                        backgroundThread.quitSafely()
+                    } catch (e: Exception) {
+                    } finally {
+                        captureSession = null
+                        cameraDevice = null
+                        imageReader = null
+                    }
                 }
+                
 
                 override fun onError(camera: CameraDevice, error: Int) {
-                    camera.close()
-                    cameraDevice = null
-                    captureSession = null
+                    try {
+                        camera.close()
+                        captureSession?.stopRepeating()
+                        captureSession?.close()
+                        cameraDevice?.close()
+                        imageReader?.close()
+                        backgroundThread.quitSafely()
+                    } catch (e: Exception) {
+                        errorWhenReadingQRCode(e, "startCamera 3")
+                    } finally {
+                        captureSession = null
+                        cameraDevice = null
+                        imageReader = null
+                    }
                 }
             }, backgroundHandler)
         } catch (e: CameraAccessException) {
-            errorWhenReadingQRCode(e)
+            errorWhenReadingQRCode(e, "startCamera 4")
         }
     }
 
@@ -95,34 +124,44 @@ class QRCodeTexture(
         try {
             cameraDevice?.createCaptureSession(surfaces, object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
-                    if (cameraDevice == null) {
-                        errorWhenReadingQRCode(java.lang.Exception(QRCodeConstants.CAMERA_DEVICE_NULL))
+                    if (isCameraStopped || cameraDevice == null) {
+                        errorWhenReadingQRCode(java.lang.Exception(QRCodeConstants.CAMERA_DEVICE_NULL), "createCaptureSession 1")
                         return
                     }
-
+                
                     captureSession = session
-                    captureRequestBuilder = cameraDevice!!.createCaptureRequest(
-                        CameraDevice.TEMPLATE_PREVIEW
-                    ).apply {
-                        addTarget(previewSurface)
-                        addTarget(imageReader!!.surface)
+                    try {
+                        captureRequestBuilder = cameraDevice!!.createCaptureRequest(
+                            CameraDevice.TEMPLATE_PREVIEW
+                        ).apply {
+                            addTarget(previewSurface)
+                            addTarget(imageReader!!.surface)
+                        }
+                    } catch (e: IllegalStateException) {
+                        errorWhenReadingQRCode(e, "createCaptureSession 2")
+                        return
                     }
-
+                
                     try {
                         session.setRepeatingRequest(captureRequestBuilder!!.build(), null, backgroundHandler)
+                        if (!isCameraStopped){
+                            toggleFlash(isFlashLightOn)
+                        }
                     } catch (e: CameraAccessException) {
-                        errorWhenReadingQRCode(e)
+                        errorWhenReadingQRCode(e, "createCaptureSession 3")
+                    } catch (e: IllegalStateException) {
+                        errorWhenReadingQRCode(e, "createCaptureSession 4")
                     }
-                    toggleFlash(isFlashLightOn)
+                   
 
                 }
 
                 override fun onConfigureFailed(session: CameraCaptureSession) {
-                    errorWhenReadingQRCode(java.lang.Exception(session.toString()))
+                    errorWhenReadingQRCode(java.lang.Exception(session.toString()), "createCaptureSession 5")
                 }
             }, backgroundHandler)
         } catch (e: CameraAccessException) {
-            errorWhenReadingQRCode(e)
+            errorWhenReadingQRCode(e, "createCaptureSession 6")
         }
     }
 
@@ -153,29 +192,18 @@ class QRCodeTexture(
         }
     }
 
-    fun stopCamera() {
-        try {
-            captureSession?.stopRepeating()
-            captureSession?.close()
-            cameraDevice?.close()
-            imageReader?.close()
-            backgroundThread.quitSafely()
-        } catch (e: Exception) {
-            errorWhenReadingQRCode(e)
-        }
-    }
-
     fun pauseCamera() {
         try {
             captureSession?.stopRepeating()
         } catch (e: CameraAccessException) {
-            errorWhenReadingQRCode(e)
+            errorWhenReadingQRCode(e, "pauseCamera")
         }
     }
 
     fun toggleFlash(enableFlash: Boolean) {
-        if (cameraDevice == null || captureSession == null) return
-        if (captureRequestBuilder == null) return
+        if (isCameraStopped || cameraDevice == null || captureSession == null || captureRequestBuilder == null) {
+            return
+        }
         val newFlashMode = if (enableFlash) {
             CaptureRequest.FLASH_MODE_TORCH
         } else {
@@ -185,7 +213,11 @@ class QRCodeTexture(
         try {
             captureSession?.setRepeatingRequest(captureRequestBuilder!!.build(), null, backgroundHandler)
         } catch (e: CameraAccessException) {
-            errorWhenReadingQRCode(e)
+            errorWhenReadingQRCode(e, "toggleFlash 1")
+        } catch (e: IllegalStateException) {
+            if (!e.message?.contains("Session has been closed")!!) {
+                errorWhenReadingQRCode(e, "toggleFlash 2")
+            }
         }
     }
 
@@ -196,7 +228,7 @@ class QRCodeTexture(
         try {
             captureSession?.setRepeatingRequest(captureRequestBuilder!!.build(), null, backgroundHandler)
         } catch (e: CameraAccessException) {
-            errorWhenReadingQRCode(e)
+            errorWhenReadingQRCode(e, "resumeCamera")
         }
     }
 
@@ -206,7 +238,8 @@ class QRCodeTexture(
         }
     }
 
-    private fun errorWhenReadingQRCode(e: java.lang.Exception) {
+    private fun errorWhenReadingQRCode(e: java.lang.Exception, methodError: String) {
+        Log.e("QRCodeTexture", "Erro no método $methodError", e)
         Handler(Looper.getMainLooper()).post {
             channel.invokeMethod(QRCodeConstants.METHOD_ON_ERROR, e.message)
         }

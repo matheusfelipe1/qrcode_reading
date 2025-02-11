@@ -77,14 +77,45 @@ class _QRCodeReadingState
         final state = snapshot.data as QRCodeReadingState;
         switch (state) {
           case QRCodeReadingState.loading:
-            return widget.loadingWidget ?? _buildDefaultLoadingWidget();
+            return LayoutBuilder(
+              builder: (_, constraints) => AspectRatio(
+                aspectRatio: constraints.maxWidth / constraints.maxHeight,
+                child: ClipRect(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child:
+                          widget.loadingWidget ?? _buildDefaultLoadingWidget(),
+                    ),
+                  ),
+                ),
+              ),
+            );
           case QRCodeReadingState.preview:
             return _buildPreviewWidget();
           case QRCodeReadingState.scanned when controller.data != null:
             widget.onRead(controller.data!);
             return _buildPreviewWidget();
           case QRCodeReadingState.error:
-            return _buildErrorWidget();
+            return widget.errorWidget ??
+                LayoutBuilder(
+                  builder: (_, constraints) => AspectRatio(
+                    aspectRatio: constraints.maxWidth / constraints.maxHeight,
+                    child: ClipRect(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                          child: widget.loadingWidget ??
+                              _buildDefaultLoadingWidget(),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
           default:
             return widget.errorWidget ?? _buildErrorWidget();
         }
@@ -101,7 +132,19 @@ class _QRCodeReadingState
   Widget _buildPreviewWidget() {
     return LayoutBuilder(builder: (context, constraints) {
       if (controller.textureId == null) {
-        return _buildDefaultLoadingWidget();
+        return AspectRatio(
+          aspectRatio: constraints.maxWidth / constraints.maxHeight,
+          child: ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: widget.loadingWidget ?? _buildDefaultLoadingWidget(),
+              ),
+            ),
+          ),
+        );
       }
 
       final Widget scannerWidget = AspectRatio(

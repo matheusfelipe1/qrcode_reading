@@ -1,5 +1,7 @@
 package com.matheussantos.qrcode_reading
 
+import android.os.Looper
+import android.os.Handler
 import android.content.Context
 import io.flutter.view.TextureRegistry
 import io.flutter.plugin.common.MethodCall
@@ -37,11 +39,6 @@ class QRCodeReadingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
       QRCodeConstants.METHOD_ON_RESUME -> qrCodeReading?.resumeCamera()
 
       QRCodeConstants.METHOD_STOP_CAMERA -> {
-        qrCodeReading?.stopCamera()
-        qrCodeReading = null
-        textureEntry?.release()
-        textureEntry = null
-        result.success(null)
       }
 
       QRCodeConstants.METHOD_START_CAMERA -> {
@@ -52,6 +49,10 @@ class QRCodeReadingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
 
         textureEntry = textureRegistry!!.createSurfaceTexture()
         val textureId = textureEntry!!.id()
+
+        result.success(textureId)
+
+
         val weakContext = WeakReference(activityContext!!)
 
         qrCodeReading = QRCodeTexture(
@@ -61,8 +62,10 @@ class QRCodeReadingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
         )
 
         val isFlashLightOn = (call.arguments as Map<String, Any>)["isFlashLightOn"] as Boolean
-        qrCodeReading?.startCamera(isFlashLightOn)
-        result.success(textureId)
+        Handler(Looper.getMainLooper()).postDelayed({
+          qrCodeReading?.startCamera(isFlashLightOn)
+        }, 400)
+
       }
 
       else -> {
@@ -77,6 +80,9 @@ class QRCodeReadingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
 
   override fun onDetachedFromActivityForConfigChanges() {
     activityContext = null
+    qrCodeReading = null
+    textureEntry?.release()
+    textureEntry = null
   }
 
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
@@ -85,5 +91,8 @@ class QRCodeReadingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Acti
 
   override fun onDetachedFromActivity() {
     activityContext = null
+    qrCodeReading = null
+    textureEntry?.release()
+    textureEntry = null
   }
 }

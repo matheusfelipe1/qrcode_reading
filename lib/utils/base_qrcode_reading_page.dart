@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:qrcode_reading/utils/base_qrcode_reading_controller.dart';
 
-abstract class BaseQRCodeReadingPage<T extends StatefulWidget, C extends BaseQRCodeReadingController> extends State<T> with WidgetsBindingObserver  {
+abstract class BaseQRCodeReadingPage<T extends StatefulWidget,
+        C extends BaseQRCodeReadingController> extends State<T>
+    with WidgetsBindingObserver {
   late final C controller;
   @override
   void initState() {
@@ -27,5 +29,5 @@ abstract class BaseQRCodeReadingPage<T extends StatefulWidget, C extends BaseQRC
     super.dispose();
   }
 
-  C getController();  
-} 
+  C getController();
+}

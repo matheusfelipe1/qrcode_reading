@@ -22,12 +22,11 @@ class MethodChannelQRCodeReading extends QRCodeReadingPlatform {
       );
     } catch (error) {
       if (error is PlatformException) {
-        handlerResult(error); 
+        handlerResult(error);
       }
       return null;
     }
   }
-
 
   Future<dynamic> callHandler(MethodCall call) async {
     if (call.method == onQRCodeRead) {
@@ -75,5 +74,4 @@ class MethodChannelQRCodeReading extends QRCodeReadingPlatform {
       handlerResult(error);
     }
   }
-
 }
