@@ -40,12 +40,22 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         return textureId
     }
     
+    @available(iOS 13.0, *)
     func startCamera(settings: QRCodeSettings) -> Void {
 
         let captureSession = AVCaptureSession()
         captureSession.sessionPreset = .hd4K3840x2160
         
-        guard let videoCaptureDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
+        let videoCaptureDevice: AVCaptureDevice
+        
+        if let device = findUltraWideCamera() {
+            videoCaptureDevice = device
+            self.isBlurry = true
+        } else {
+            guard let defaultDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
+            videoCaptureDevice = defaultDevice
+        }
+        
         guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice) else { return }
         
         self.videoCaptureDevice = videoCaptureDevice
@@ -294,7 +304,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
             
             let edgeValue = Float(bitmap[0]) / 255.0
             
-            if edgeValue < 0.3 {
+            if edgeValue < 0.4 {
                 return true
             }
         }
@@ -314,7 +324,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
 
         let brightness = Float(bitmap[0]) / 255.0
         
-        if brightness > 4.5, luminance > 4.2 {
+        if brightness > 4.5, luminance > 4.0 {
             
             return true
         }
