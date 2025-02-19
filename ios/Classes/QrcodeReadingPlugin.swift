@@ -35,16 +35,25 @@ public class QRCodeReadingPlugin: NSObject, FlutterPlugin {
             return
         }
         
-        guard let textureId = self.qrcodeTexture?.startCameraAndGetTextureId(settings: qrcodeSettings) else {
+        if #available(iOS 13.0, *) {
+            guard let textureId = self.qrcodeTexture?.getTextureId() else {
+                result(FlutterError(
+                    code: "CAMERA_ERROR",
+                    message: "Unable to launch camera or get textureId.",
+                    details: nil
+                ))
+                return
+            }
+            result(textureId)
+            self.qrcodeTexture?.startCamera(settings: qrcodeSettings)
+        } else {
             result(FlutterError(
                 code: "CAMERA_ERROR",
-                message: "Unable to launch camera or get textureId.",
+                message: "iOS must be in iOS 13.0 version or higher",
                 details: nil
             ))
-            return
         }
         
-        result(textureId)
     } else {
         result(FlutterError(
             code: "INVALID_ARGUMENTS",
