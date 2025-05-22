@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:qrcode_reading/src/qrcode_settings.dart';
 import 'package:qrcode_reading/constants/qrcode_reading_constants.dart';
 
@@ -9,7 +8,6 @@ import '../src/qrcode_reading_platform_interface.dart';
 /// An implementation of [QRCodeReadingPlatform] that uses method channels.
 class MethodChannelQRCodeReading extends QRCodeReadingPlatform {
   /// The method channel used to interact with the native platform.
-  @visibleForTesting
   final methodChannel = const MethodChannel(qrcodeReadingChannel);
 
   @override

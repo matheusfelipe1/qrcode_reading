@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:qrcode_reading/qrcode_reading.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qrcode_reading_example/styles/shape_qecode_view.dart';
 
 void main() {
@@ -22,7 +21,7 @@ class MyApp extends StatelessWidget {
 }
 
 class _FirstScreen extends StatefulWidget {
-  const _FirstScreen({super.key});
+  const _FirstScreen();
 
   @override
   State<_FirstScreen> createState() => __FirstScreenState();
@@ -35,7 +34,6 @@ class __FirstScreenState extends State<_FirstScreen> {
       body: Center(
         child: TextButton(
           onPressed: () async {
-            await Permission.camera.request();
             Navigator.pushNamed(context, "/second");
           },
           child: const Text("Next"),
@@ -46,7 +44,7 @@ class __FirstScreenState extends State<_FirstScreen> {
 }
 
 class _SecondScreen extends StatefulWidget {
-  const _SecondScreen({super.key});
+  const _SecondScreen();
 
   @override
   State<_SecondScreen> createState() => __SecondScreenState();
@@ -89,9 +87,6 @@ class __SecondScreenState extends State<_SecondScreen> {
               pauseReading: pause,
               onRead: (data) {
                 WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-                  setState(() {
-                    pause = true;
-                  });
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -109,7 +104,7 @@ class __SecondScreenState extends State<_SecondScreen> {
                     borderLength: 40,
                     borderColor: Colors.white,
                   ),
-                  color: Colors.black.withOpacity(.5),
+                  color: Colors.transparent,
                 ),
               ),
             ),

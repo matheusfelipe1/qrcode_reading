@@ -44,7 +44,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     func startCamera(settings: QRCodeSettings) -> Void {
 
         let captureSession = AVCaptureSession()
-        captureSession.sessionPreset = .hd4K3840x2160
+        captureSession.sessionPreset = .high
         
         let videoCaptureDevice: AVCaptureDevice
         
@@ -248,7 +248,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     
     @available(iOS 13.0, *)
     private func findUltraWideCamera() -> AVCaptureDevice? {
-        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera]
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInDualWideCamera]
         let discoverySession = AVCaptureDevice.DiscoverySession(
             deviceTypes: deviceTypes,
             mediaType: .video,
