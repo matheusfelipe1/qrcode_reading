@@ -1,6 +1,6 @@
 name: qrcode_reading
 description: "A Flutter plugin for scanning QR codes using the device camera. It provides customizable overlay and loading widgets, error handling, flashlight control, and the ability to pause and resume scanning."
-version: 1.0.7
+version: 1.0.8
 homepage: https://github.com/matheusfelipe1/qrcode_reading
 repository: https://github.com/matheusfelipe1/qrcode_reading
 documentation: https://github.com/matheusfelipe1/qrcode_reading#readme
