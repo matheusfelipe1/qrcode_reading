@@ -38,15 +38,17 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     }
     
     func getTextureId() -> Int64 {
-        textureId = registry.register(self)
         return textureId
     }
     
     @available(iOS 13.0, *)
     func startCamera(settings: QRCodeSettings) -> Void {
+        textureId = registry.register(self)
+        pixelBuffer = nil
+        registry.textureFrameAvailable(textureId)
 
         let captureSession = AVCaptureSession()
-        captureSession.sessionPreset = .high
+        captureSession.sessionPreset = .hd1280x720
         
         let videoCaptureDevice: AVCaptureDevice
         
@@ -60,6 +62,10 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice) else { return }
         
         self.videoCaptureDevice = videoCaptureDevice
+        
+        self.captureSession = captureSession
+        
+        self.resumeCamera()
 
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
@@ -84,9 +90,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
             captureSession.addOutput(videoOutput)
         }
         
-        self.captureSession = captureSession
         
-        self.resumeCamera()
         
         DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.0) {
             self.toggleFlash(flashLight: settings.isFlashLightOn)
@@ -96,13 +100,12 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     
     func stopCamera() {
         isScanning = false
-        DispatchQueue.global(qos: .background).async {
-            self.captureSession?.stopRunning()
-        }
-        DispatchQueue.main.async {
-            self.registry.unregisterTexture(self.textureId)
-            self.textureId = 0
-        }
+        self.captureSession?.stopRunning()
+        self.pixelBuffer = nil
+        self.registry.unregisterTexture(self.textureId)
+        self.textureId = 0
+        self.captureSession = nil
+        self.videoCaptureDevice = nil
     }
     
     func pauseCamera() {
@@ -114,11 +117,15 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     
     func resumeCamera() {
         isScanning = true
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            guard let self = self, let session = self.captureSession, !session.isRunning else { return }
-            session.startRunning()
-        }
-        DispatchQueue.main.async {
+        
+        pixelBuffer = nil
+        registry.textureFrameAvailable(textureId)
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, let session = self.captureSession else { return }
+            if !session.isRunning {
+                session.startRunning()
+            }
             self.registry.textureFrameAvailable(self.textureId)
         }
     }
@@ -133,13 +140,14 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         if isScanning {
             if output is AVCaptureVideoDataOutput {
-                if let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-                    if let videoOrientation = currentVideoOrientation() {
-                        connection.videoOrientation = videoOrientation
+                DispatchQueue.main.sync {
+                    if let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                        if let videoOrientation = currentVideoOrientation() {
+                            connection.videoOrientation = videoOrientation
+                        }
+                        self.pixelBuffer = imageBuffer
+                        self.registry.textureFrameAvailable(self.textureId)
                     }
-
-                    pixelBuffer = imageBuffer
-                    registry.textureFrameAvailable(textureId)
                 }
             }
             

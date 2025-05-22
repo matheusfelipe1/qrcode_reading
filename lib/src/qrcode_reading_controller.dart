@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:developer';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:qrcode_reading/src/qrcode_settings.dart';
 import 'package:qrcode_reading/enum/qrcode_reading_state.dart';
@@ -35,8 +34,8 @@ class QRCodeReadingController extends BaseQRCodeReadingController {
   void onInit() {
     _controller = StreamController<QRCodeReadingState>.broadcast();
     _controller?.sink.add(QRCodeReadingState.loading);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      textureId = await QRCodeReadingPlatform.instance.getTextureId(settings);
+    QRCodeReadingPlatform.instance.getTextureId(settings).then((data) {
+      textureId = data;
       if (textureId != null) {
         _controller?.sink.add(QRCodeReadingState.preview);
       }

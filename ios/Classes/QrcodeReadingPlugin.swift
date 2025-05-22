@@ -36,6 +36,7 @@ public class QRCodeReadingPlugin: NSObject, FlutterPlugin {
         }
         
         if #available(iOS 13.0, *) {
+            self.qrcodeTexture?.startCamera(settings: qrcodeSettings)
             guard let textureId = self.qrcodeTexture?.getTextureId() else {
                 result(FlutterError(
                     code: "CAMERA_ERROR",
@@ -45,7 +46,6 @@ public class QRCodeReadingPlugin: NSObject, FlutterPlugin {
                 return
             }
             result(textureId)
-            self.qrcodeTexture?.startCamera(settings: qrcodeSettings)
         } else {
             result(FlutterError(
                 code: "CAMERA_ERROR",

@@ -69,6 +69,12 @@ class _QRCodeReadingState
   }
 
   @override
+  void dispose() {
+    super.dispose();
+    controller.onDispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<QRCodeReadingState>(
       stream: controller.stream,
