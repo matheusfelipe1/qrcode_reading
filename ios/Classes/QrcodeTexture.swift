@@ -50,7 +50,6 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         
         if let device = findUltraWideCamera() {
             videoCaptureDevice = device
-            self.isBlurry = true
         } else {
             guard let defaultDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
             videoCaptureDevice = defaultDevice
@@ -248,7 +247,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     
     @available(iOS 13.0, *)
     private func findUltraWideCamera() -> AVCaptureDevice? {
-        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInDualWideCamera]
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera]
         let discoverySession = AVCaptureDevice.DiscoverySession(
             deviceTypes: deviceTypes,
             mediaType: .video,
