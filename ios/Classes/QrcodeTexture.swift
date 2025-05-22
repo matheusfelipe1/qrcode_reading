@@ -27,6 +27,8 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     private var captureSession: AVCaptureSession?
     private var commandChannel: FlutterMethodChannel
     private var videoCaptureDevice: AVCaptureDevice?
+    private var consecutiveLowEdges: Int = 0
+    private let maxEdges: Int = 50
     
     
     init(registry: FlutterTextureRegistry, messenger: FlutterBinaryMessenger) {
@@ -48,7 +50,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         
         let videoCaptureDevice: AVCaptureDevice
         
-        if let device = findUltraWideCamera() {
+        if let device = findCamera() {
             videoCaptureDevice = device
         } else {
             guard let defaultDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
@@ -101,7 +103,6 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
             self.registry.unregisterTexture(self.textureId)
             self.textureId = 0
         }
-        self.isBlurry = false
     }
     
     func pauseCamera() {
@@ -128,7 +129,6 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     }
     
     private var lastFrameProcessed: TimeInterval = 0
-    private var isBlurry: Bool = false
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         if isScanning {
@@ -143,7 +143,9 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
                 }
             }
             
-            if isBlurry { return; }
+            DispatchQueue.main.async {
+                self.checkFrameSharpness(sampleBuffer)
+            }
 
             let currentTime = CACurrentMediaTime()
             if currentTime - lastFrameProcessed >= 0.5 {
@@ -153,23 +155,12 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
                     guard let self = self else { return }
                     guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-                    let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-
-                    let luminance = self.averageLuminance(from: ciImage)
-
-                    if luminance < 0.2 {
-                        return
-                    }
-
-                    isBlurry = self.isImageBlurry(ciImage, luminance)
-                    
-                    if isBlurry {
-                        DispatchQueue.main.async {
-                            if #available(iOS 13.0, *) {
-                                self.switchToUltraWideCamera()
-                            }
-                        }
-                    }
+                }
+            }
+            
+            if consecutiveLowEdges >= maxEdges {
+                if #available(iOS 13.0, *) {
+                    switchToAngleWideCamera()
                 }
             }
         }
@@ -246,18 +237,13 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     }
     
     @available(iOS 13.0, *)
-    private func findUltraWideCamera() -> AVCaptureDevice? {
-        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInUltraWideCamera]
-        let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: deviceTypes,
-            mediaType: .video,
-            position: .back
-        )
-        return discoverySession.devices.first
+    private func findCamera() -> AVCaptureDevice? {
+        let discoverySession = AVCaptureDevice.default(for: .video)
+        return discoverySession
     }
 
     @available(iOS 13.0, *)
-    private func switchToUltraWideCamera() {
+    private func switchToAngleWideCamera() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self, let session = self.captureSession else { return }
             
@@ -267,7 +253,11 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
                 session.removeInput(input)
             }
             
-            let newCamera: AVCaptureDevice? = self.findUltraWideCamera()
+            let newCamera: AVCaptureDevice? = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [.builtInUltraWideCamera],
+                mediaType: .video,
+                position: .back
+            ).devices.first
             
             guard let camera = newCamera else {
                 print("Camera not found")
@@ -280,7 +270,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
                     self.videoCaptureDevice = camera
                     
                     try camera.lockForConfiguration()
-                    camera.videoZoomFactor = min(1.35, camera.activeFormat.videoMaxZoomFactor)
+                    camera.videoZoomFactor = min(1.0, camera.activeFormat.videoMaxZoomFactor)
                     camera.unlockForConfiguration()
                 }
             } catch {
@@ -290,72 +280,45 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
             session.startRunning()
         }
     }
-
     
-    func isImageBlurry(_ image: CIImage, _ luminance: CGFloat) -> Bool {
-        let context = CIContext()
-
-        if let edgeDetectionFilter = CIFilter(name: "CISobelEdgeDetection", parameters: [
-            kCIInputImageKey: image
-        ])?.outputImage {
-            var bitmap = [UInt8](repeating: 0, count: 4)
-            context.render(edgeDetectionFilter, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
+    private func checkFrameSharpness(_ sampleBuffer: CMSampleBuffer) {
+        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        
+        CVPixelBufferLockBaseAddress(imageBuffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(imageBuffer, .readOnly) }
+        
+        let width = CVPixelBufferGetWidth(imageBuffer)
+        let height = CVPixelBufferGetHeight(imageBuffer)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
+        guard let baseAddress = CVPixelBufferGetBaseAddress(imageBuffer) else { return }
+        let sampleSize = 20
+        var edgeCount = 0
+        
+        for y in (height/2 - sampleSize)...(height/2 + sampleSize) {
+            guard y >= 0 && y < height else { continue }
             
-            let edgeValue = Float(bitmap[0]) / 255.0
-            
-            if edgeValue < 0.4 {
-                return true
+            let row = baseAddress + y * bytesPerRow
+            for x in (width/2 - sampleSize)...(width/2 + sampleSize) {
+                guard x >= 0 && x < width else { continue }
+                
+                let pixel = row.load(fromByteOffset: x * 4, as: UInt32.self)
+                let r = Float((pixel >> 16) & 0xFF)
+                let g = Float((pixel >> 8) & 0xFF)
+                let b = Float(pixel & 0xFF)
+                let luminance = (0.299 * r + 0.587 * g + 0.114 * b)
+                
+                if luminance < 30 || luminance > 220 { // Thresholds otimizados
+                    edgeCount += 1
+                }
             }
         }
-
-        guard let grayscaleImage = CIFilter(name: "CIColorControls", parameters: [
-            kCIInputImageKey: image,
-            kCIInputSaturationKey: 0.0
-        ])?.outputImage else { return false }
-
-        guard let averageFilter = CIFilter(name: "CIAreaAverage", parameters: [
-            kCIInputImageKey: grayscaleImage,
-            kCIInputExtentKey: CIVector(x: 0, y: 0, z: image.extent.width, w: image.extent.height)
-        ])?.outputImage else { return false }
-
-        var bitmap = [UInt8](repeating: 0, count: 4)
-        context.render(averageFilter, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
-
-        let brightness = Float(bitmap[0]) / 255.0
         
-        if brightness > 4.5, luminance > 4.0 {
-            
-            return true
+        if edgeCount == 0 {
+            consecutiveLowEdges += 1
+        } else {
+            consecutiveLowEdges = 0
         }
-
-        return brightness < 0.3
     }
-
-
-    
-    
-    private func averageLuminance(from ciImage: CIImage) -> CGFloat {
-        let extent = ciImage.extent
-        let context = CIContext(options: nil)
-        let inputImage = ciImage.clampedToExtent()
-
-        guard let filter = CIFilter(name: "CIAreaAverage") else { return 0.0 }
-        filter.setValue(inputImage, forKey: kCIInputImageKey)
-        filter.setValue(CIVector(x: extent.origin.x, y: extent.origin.y, z: extent.size.width, w: extent.size.height), forKey: "inputExtent")
-
-        guard let outputImage = filter.outputImage else { return 0.0 }
-
-        var bitmap = [UInt8](repeating: 0, count: 4)
-        context.render(outputImage, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
-
-        let red = CGFloat(bitmap[0]) / 255.0
-        let green = CGFloat(bitmap[1]) / 255.0
-        let blue = CGFloat(bitmap[2]) / 255.0
-        let result = 0.299 * red + 0.587 * green + 0.114 * blue
-        return result
-    }
-
 
 }
-
 
