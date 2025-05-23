@@ -29,6 +29,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
     private var videoCaptureDevice: AVCaptureDevice?
     private var consecutiveLowEdges: Int = 0
     private let maxEdges: Int = 50
+    private var isInAnotherCamera: Bool = false
     
     
     init(registry: FlutterTextureRegistry, messenger: FlutterBinaryMessenger) {
@@ -106,6 +107,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
         self.textureId = 0
         self.captureSession = nil
         self.videoCaptureDevice = nil
+        self.isInAnotherCamera = false
     }
     
     func pauseCamera() {
@@ -166,7 +168,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
                 }
             }
             
-            if consecutiveLowEdges >= maxEdges {
+            if consecutiveLowEdges >= maxEdges, !self.isInAnotherCamera {
                 if #available(iOS 13.0, *) {
                     switchToAngleWideCamera()
                 }
@@ -286,6 +288,7 @@ class QrcodeTexture: NSObject, FlutterTexture, AVCaptureVideoDataOutputSampleBuf
             }
             
             session.startRunning()
+            self.isInAnotherCamera = true
         }
     }
     
